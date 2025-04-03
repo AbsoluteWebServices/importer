@@ -23,7 +23,7 @@ const (
         GREEN   = "\033[32m"
         BOLD    = "\033[1m"
         REGULAR = "\033[0m"
-        VERSION = "1.0"
+        VERSION = "0.1"
         REPOURL = "absolutewebservices/importer"
 )
 
@@ -37,10 +37,13 @@ type Config struct {
 }
 
 func main() {
-        if len(os.Args) >= 2 && os.Args[1] == "update" {
-                updateBinary()
-                return
+        updateBinary()
+
+        if len(os.Args) >= 2 && (os.Args[1] == "version" || os.Args[1] == "-v" || os.Args[1] == "--version") {
+            fmt.Println(BOLD + "Importer version is " + VERSION + REGULAR)
+            os.Exit(0)
         }
+
         if len(os.Args) < 3 {
                 printUsage()
                 os.Exit(1)
@@ -61,8 +64,6 @@ func main() {
                 runSQLImport(&config)
         case "both":
                 runBothImport(&config)
-        case "version", "-v", "--version":
-                fmt.Println(BOLD + "Importer version is " + VERSION + REGULAR)
         default:
                 printUsage()
                 os.Exit(1)
@@ -147,7 +148,7 @@ func updateBinary() {
 
         tempBinaryPath := filepath.Join(tempDir, binaryName)
 
-        downloadCmd := exec.Command("curl", "-L", fmt.Sprintf("%s/releases/latest/download/%s", REPOURL, binaryName), "-o", tempBinaryPath)
+        downloadCmd := exec.Command("curl", "-L", fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", REPOURL, latestVersion, binaryName), "-o", tempBinaryPath)
         if err := downloadCmd.Run(); err != nil {
                 fmt.Printf("%sFailed to download update: %v%s\n", RED, err, REGULAR)
                 return
@@ -169,7 +170,8 @@ func updateBinary() {
                 return
         }
 
-        fmt.Printf("%sBinary updated successfully!%s\n", GREEN, REGULAR)
+        fmt.Printf("\n%sBinary updated successfully!%s\n", GREEN, REGULAR)
+        os.Exit(0)
 }
 
 func compareVersions(v1, v2 string) int {
