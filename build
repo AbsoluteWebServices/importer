@@ -2,4 +2,4 @@
 
 GOARCH=amd64 GOOS=darwin go build -o importer-darwin-amd64
 GOARCH=arm64 GOOS=darwin go build -o importer-darwin-arm64
-GOARCH=amd64 GOOS=linux go build -o importer-linux-amd64
+CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o importer-linux-amd64

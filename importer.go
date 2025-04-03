@@ -23,7 +23,7 @@ const (
         GREEN   = "\033[32m"
         BOLD    = "\033[1m"
         REGULAR = "\033[0m"
-        VERSION = "1.2"
+        VERSION = "1.3"
         REPOURL = "absolutewebservices/importer"
 )
 
