@@ -23,7 +23,7 @@ const (
         GREEN   = "\033[32m"
         BOLD    = "\033[1m"
         REGULAR = "\033[0m"
-        VERSION = "0.1"
+        VERSION = "1.2"
         REPOURL = "absolutewebservices/importer"
 )
 
@@ -581,3 +581,4 @@ func printUsage() {
         fmt.Println("sql - create sql dump and download to the local node")
         fmt.Println("both - download media and sql dump to the local node")
 }
+
