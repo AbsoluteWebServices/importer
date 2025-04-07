@@ -67,11 +67,11 @@ mv importer-<your-platform> importer
 chmod +x importer-<your-platform>
 ```
 
-**"Unidentified developer"** warning – macOS may block the app. To allow it:
+- **"Unidentified developer"** warning – macOS may block the app. To allow it:
 1. Go to System Preferences → Security & Privacy → General.
 2. Click "Allow Anyway" after attempting to run the binary.
 
-**Architecture mismatch** – Apple Silicon users should download the `arm64` version. Intel Macs need the `amd64` version.
+- **"Architecture mismatch"** – Apple Silicon users should download the `arm64` version. Intel Macs need the `amd64` version.
 
 ## 📄 License
 
