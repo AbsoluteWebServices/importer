@@ -4,6 +4,18 @@
 
 ---
 
+## 📦 Releases
+
+Platform-specific binaries are available in the [Releases](https://github.com/AbsoluteWebServices/importer/releases) section.
+
+| Filename                  | OS     | Architecture   | Download |
+|---------------------------|--------|----------------|----------|
+| `importer-darwin-amd64`   | macOS  | Intel (x86_64) | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-darwin-amd64) |
+| `importer-darwin-arm64`   | macOS  | Apple Silicon  | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-darwin-arm64) |
+| `importer-linux-amd64`    | Linux  | Intel/AMD      | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-linux-amd64) |
+
+
+
 ## 🔧 Usage
 
 Run the tool using the following syntax:
@@ -30,16 +42,6 @@ You can authenticate using:
 `Password` – You'll be prompted to enter the password when connecting.
 
 `SSH key` – If no password is provided, the app will try to use your default key at `~/.ssh/id_rsa`.
-
-## 📦 Releases
-
-Platform-specific binaries are available in the [Releases](https://github.com/AbsoluteWebServices/importer/releases) section.
-
-| Filename                  | OS     | Architecture   | Download |
-|---------------------------|--------|----------------|----------|
-| `importer-darwin-amd64`   | macOS  | Intel (x86_64) | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-darwin-amd64) |
-| `importer-darwin-arm64`   | macOS  | Apple Silicon  | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-darwin-arm64) |
-| `importer-linux-amd64`    | Linux  | Intel/AMD      | [⬇️ Download](https://github.com/AbsoluteWebServices/importer/releases/latest/download/importer-linux-amd64) |
 
 ## ⬇️ How to Download and Use
 ### 1. Download the right version
