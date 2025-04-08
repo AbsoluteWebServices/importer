@@ -392,76 +392,94 @@ func parseConfigOutput(output string) map[string]string {
 }
 
 func exportDatabase(client *ssh.Client, sftpClient *sftp.Client, config *Config, dbConfig map[string]string) {
-        session, err := client.NewSession()
-        if err != nil {
-                fmt.Printf("%sSSH session failed: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
+    session, err := client.NewSession()
+    if err != nil {
+        fmt.Printf("%sSSH session failed: %v%s\n", RED, err, REGULAR)
+        os.Exit(1)
+    }
+    defer session.Close()
+
+    passArg := ""
+    if dbConfig["dbpass"] != "" {
+        passArg = fmt.Sprintf("-p'%s'", dbConfig["dbpass"])
+    }
+
+    // Command to get the database size
+    sizeCmd := fmt.Sprintf("mysql -h %s -u%s %s -e \"SELECT ROUND(SUM(data_length + index_length)) AS 'SIZE' FROM information_schema.TABLES WHERE table_schema = '%s';\" | grep -v SIZE",
+        dbConfig["dbhost"], dbConfig["dbuser"], passArg, dbConfig["dbname"])
+    
+    sizeOutput, err := session.CombinedOutput(sizeCmd)
+    if err != nil {
+        fmt.Printf("%sFailed to get database size: %v (output: %s)%s\n", RED, err, string(sizeOutput), REGULAR)
+        os.Exit(1)
+    }
+
+    // Split output by lines and take the last non-empty line
+    outputStr := strings.TrimSpace(string(sizeOutput))
+    lines := strings.Split(outputStr, "\n")
+    var sizeStr string
+    for i := len(lines) - 1; i >= 0; i-- {
+        if strings.TrimSpace(lines[i]) != "" {
+            sizeStr = lines[i]
+            break
         }
-        defer session.Close()
+    }
 
-        passArg := ""
-        if dbConfig["dbpass"] != "" {
-                passArg = fmt.Sprintf("-p'%s'", dbConfig["dbpass"])
+    // Parse the size
+    sizeInt, err := strconv.ParseInt(strings.TrimSpace(sizeStr), 10, 64)
+    if err != nil {
+        fmt.Printf("%sFailed to parse database size: %v (output: %s)%s\n", RED, err, outputStr, REGULAR)
+        os.Exit(1)
+    }
+    sizeAfterDivision := sizeInt / 8
+
+    fmt.Printf("%s!!! Estimated compressed db file size: %s%s\n", BOLD, humanReadableSize(sizeAfterDivision), REGULAR)
+
+    // Rest of the function remains unchanged...
+    dumpFile := fmt.Sprintf("auto_%s_%s.sql.gz", dbConfig["dbname"], time.Now().Format("02_01-15_04"))
+    dumpCmd := fmt.Sprintf("mysqldump -h %s %s -u%s %s --no-tablespaces --routines --skip-triggers --single-transaction | gzip -9",
+        dbConfig["dbhost"], dbConfig["dbname"], dbConfig["dbuser"], passArg)
+
+    session, err = client.NewSession()
+    if err != nil {
+        fmt.Printf("%sSSH session failed: %v%s\n", RED, err, REGULAR)
+        os.Exit(1)
+    }
+    defer session.Close()
+
+    localFile, err := os.Create(dumpFile)
+    if err != nil {
+        fmt.Printf("%sFailed to create local file: %v%s\n", RED, err, REGULAR)
+        os.Exit(1)
+    }
+    defer localFile.Close()
+
+    bar := pb.Full.Start64(sizeAfterDivision)
+    barReader, barWriter := io.Pipe()
+    session.Stdout = barWriter
+
+    go func() {
+        defer barWriter.Close()
+        if err := session.Run(dumpCmd); err != nil {
+            fmt.Printf("%sDatabase export failed: %v%s\n", RED, err, REGULAR)
+            os.Exit(1)
         }
+    }()
 
-        sizeCmd := fmt.Sprintf("mysql -h %s -u%s %s -e \"SELECT ROUND(SUM(data_length + index_length)) AS 'SIZE' FROM information_schema.TABLES WHERE table_schema = '%s';\" | grep -v SIZE",
-                dbConfig["dbhost"], dbConfig["dbuser"], passArg, dbConfig["dbname"])
-        sizeOutput, _ := session.CombinedOutput(sizeCmd)
+    _, err = io.Copy(io.MultiWriter(localFile, bar.NewProxyWriter(io.Discard)), barReader)
+    if err != nil {
+        fmt.Printf("%sFailed to write local file: %v%s\n", RED, err, REGULAR)
+        os.Exit(1)
+    }
+    bar.Finish()
 
-        sizeInt, err := strconv.ParseInt(strings.TrimSpace(string(sizeOutput)), 10, 64)
-        sizeAfterDivision := sizeInt / 8
+    fmt.Printf("%sDatabase export completed%s\n", GREEN, REGULAR)
 
-        if err != nil {
-                fmt.Printf("%sFailed to parse database size: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
-        }
-
-        fmt.Printf("%s!!! Estimated compressed db file size: %s%s\n", BOLD, humanReadableSize(sizeAfterDivision), REGULAR)
-
-        dumpFile := fmt.Sprintf("auto_%s_%s.sql.gz", dbConfig["dbname"], time.Now().Format("02_01-15_04"))
-        dumpCmd := fmt.Sprintf("mysqldump -h %s %s -u%s %s --no-tablespaces --routines --skip-triggers --single-transaction | gzip -9",
-                dbConfig["dbhost"], dbConfig["dbname"], dbConfig["dbuser"], passArg)
-
-        session, err = client.NewSession()
-        if err != nil {
-                fmt.Printf("%sSSH session failed: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
-        }
-        defer session.Close()
-
-        localFile, err := os.Create(dumpFile)
-        if err != nil {
-                fmt.Printf("%sFailed to create local file: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
-        }
-        defer localFile.Close()
-
-        bar := pb.Full.Start64(sizeAfterDivision)
-        barReader, barWriter := io.Pipe()
-        session.Stdout = barWriter
-
-        go func() {
-                defer barWriter.Close()
-                if err := session.Run(dumpCmd); err != nil {
-                        fmt.Printf("%sDatabase export failed: %v%s\n", RED, err, REGULAR)
-                        os.Exit(1)
-                }
-        }()
-
-        _, err = io.Copy(io.MultiWriter(localFile, bar.NewProxyWriter(io.Discard)), barReader)
-        if err != nil {
-                fmt.Printf("%sFailed to write local file: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
-        }
-        bar.Finish()
-
-        fmt.Printf("%sDatabase export completed%s\n", GREEN, REGULAR)
-
-        if err := exec.Command("gzip", "-d", dumpFile).Run(); err != nil {
-                fmt.Printf("%sDecompression failed: %v%s\n", RED, err, REGULAR)
-                os.Exit(1)
-        }
-        fmt.Printf("%sSQL download finished successfully! File: %s%s\n", GREEN, dumpFile[:len(dumpFile)-3], REGULAR)
+    if err := exec.Command("gzip", "-d", dumpFile).Run(); err != nil {
+        fmt.Printf("%sDecompression failed: %v%s\n", RED, err, REGULAR)
+        os.Exit(1)
+    }
+    fmt.Printf("%sSQL download finished successfully! File: %s%s\n", GREEN, dumpFile[:len(dumpFile)-3], REGULAR)
 }
 
 func detectMediaPath(client *ssh.Client, config *Config) string {
