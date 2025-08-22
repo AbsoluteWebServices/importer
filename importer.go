@@ -23,7 +23,7 @@ const (
     GREEN   = "\033[32m"
     BOLD    = "\033[1m"
     REGULAR = "\033[0m"
-    VERSION = "1.7"
+    VERSION = "1.8"
     REPOURL = "absolutewebservices/importer"
 )
 
@@ -431,7 +431,7 @@ func exportDatabase(client *ssh.Client, sftpClient *sftp.Client, config *Config,
     fmt.Printf("%s!!! Estimated compressed db file size: %s%s\n", BOLD, humanReadableSize(sizeAfterDivision), REGULAR)
 
     dumpFile := fmt.Sprintf("auto_%s_%s.sql.gz", dbConfig["dbname"], time.Now().Format("02_01-15_04"))
-    dumpCmd := fmt.Sprintf("mysqldump -h %s %s -u%s %s --no-tablespaces --routines --skip-triggers --single-transaction --force | gzip -9",
+    dumpCmd := fmt.Sprintf("mysqldump -h %s %s -u%s %s --no-tablespaces --routines --skip-triggers --single-transaction --skip-lock-tables --force | gzip -9",
 	dbConfig["dbhost"], dbConfig["dbname"], dbConfig["dbuser"], passArg)
 
     session, err = client.NewSession()
